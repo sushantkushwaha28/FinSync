@@ -2,12 +2,12 @@
 
 // import aj from "@/lib/arcjet";
 import { db } from "@/lib/prisma";
-import { request } from "@arcjet/next";
+// import { request } from "@arcjet/next";
 import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 
 const serializeTransaction = (obj) => {
-  const serialized = { ...obj };
+  const serialized = {...obj};
   if (obj.balance) {
     serialized.balance = obj.balance.toNumber();
   }
@@ -146,11 +146,25 @@ export async function getDashboardData() {
     throw new Error("User not found");
   }
 
-  // Get all user transactions
-  const transactions = await db.transaction.findMany({
-    where: { userId: user.id },
-    orderBy: { date: "desc" },
-  });
+const accounts = await account.findMany({
+  where:{userId:user.id},
+    orderBy:{createdAt :"desc"},
+    include:{
+      _count:{
+        select:{
+          transactions:true
+        }
+      }
+    }
+})
+  const serializedAccount =accounts.map(serializeTransaction);
+  return serializedAccount;
 
-  return transactions.map(serializeTransaction);
+  // Get all user transactions
+  // const transactions = await db.transaction.findMany({
+  //   where: { userId: user.id },
+  //   orderBy: { date: "desc" },
+  // });
+
+  // return transactions.map(serializeTransaction);
 }
