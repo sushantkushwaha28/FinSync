@@ -1,13 +1,13 @@
 "use server";
 
-// import aj from "@/lib/arcjet";
-import { db } from "@/lib/prisma";
-// import { request } from "@arcjet/next";
+import aj from "@/lib/arcjet";
+import  db  from "@/lib/prisma";
+import { request } from "@arcjet/next";
 import { auth } from "@clerk/nextjs/server";
 import { revalidatePath } from "next/cache";
 
 const serializeTransaction = (obj) => {
-  const serialized = {...obj};
+  const serialized = { ...obj };
   if (obj.balance) {
     serialized.balance = obj.balance.toNumber();
   }
@@ -57,30 +57,30 @@ export async function createAccount(data) {
     if (!userId) throw new Error("Unauthorized");
 
     // Get request data for ArcJet
-    // const req = await request();
+    const req = await request();
 
     // Check rate limit
-    // const decision = await aj.protect(req, {
-    //   userId,
-    //   requested: 1, // Specify how many tokens to consume
-    // });
+    const decision = await aj.protect(req, {
+      userId,
+      requested: 1, // Specify how many tokens to consume
+    });
 
-    // if (decision.isDenied()) {
-    //   if (decision.reason.isRateLimit()) {
-    //     const { remaining, reset } = decision.reason;
-    //     console.error({
-    //       code: "RATE_LIMIT_EXCEEDED",
-    //       details: {
-    //         remaining,
-    //         resetInSeconds: reset,
-    //       },
-    //     });
+    if (decision.isDenied()) {
+      if (decision.reason.isRateLimit()) {
+        const { remaining, reset } = decision.reason;
+        console.error({
+          code: "RATE_LIMIT_EXCEEDED",
+          details: {
+            remaining,
+            resetInSeconds: reset,
+          },
+        });
 
-    //     throw new Error("Too many requests. Please try again later.");
-    //   }
+        throw new Error("Too many requests. Please try again later.");
+      }
 
-    //   throw new Error("Request blocked");
-    // }
+      throw new Error("Request blocked");
+    }
 
     const user = await db.user.findUnique({
       where: { clerkUserId: userId },
@@ -146,25 +146,11 @@ export async function getDashboardData() {
     throw new Error("User not found");
   }
 
-const accounts = await account.findMany({
-  where:{userId:user.id},
-    orderBy:{createdAt :"desc"},
-    include:{
-      _count:{
-        select:{
-          transactions:true
-        }
-      }
-    }
-})
-  const serializedAccount =accounts.map(serializeTransaction);
-  return serializedAccount;
-
   // Get all user transactions
-  // const transactions = await db.transaction.findMany({
-  //   where: { userId: user.id },
-  //   orderBy: { date: "desc" },
-  // });
+  const transactions = await db.transaction.findMany({
+    where: { userId: user.id },
+    orderBy: { date: "desc" },
+  });
 
-  // return transactions.map(serializeTransaction);
+  return transactions.map(serializeTransaction);
 }
